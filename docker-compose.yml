@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  # ZK-WaveScout Coordinator (this service)
+  coordinator:
+    build: ./zk-wavescout-coordinator
+    ports:
+      - "5000:5000"
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: info
+      PORT: 5000
+      CONTRACT_ADDRESS: ${CONTRACT_ADDRESS}
+      KDF_SALT: ${KDF_SALT}
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
+      GITHUB_OWNER: ${GITHUB_OWNER}
+      GITHUB_REPO: ${GITHUB_REPO}
+      GITHUB_BASE_BRANCH: main
+    depends_on:
+      - stellar-testnet
+    networks:
+      - zk-wavescout
+    restart: unless-stopped
+    healthcheck:
+      test: ["GET", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Soroban Smart Contract (mock for local testing)
+  contracts:
+    image: stellar/quickstart:latest
+    environment:
+      QUICKSTART_DEVELOPMENT: "true"
+    ports:
+      - "8000:8000"
+    networks:
+      - zk-wavescout
+    restart: unless-stopped
+
+  # Stellar Testnet Horizon (for event streaming)
+  stellar-testnet:
+    image: stellar/quickstart:latest
+    environment:
+      STELLAR_NETWORK_PASSPHRASE: "Test SDF Network ; September 2015"
+    ports:
+      - "8001:8000"
+    networks:
+      - zk-wavescout
+    restart: unless-stopped
+
+networks:
+  zk-wavescout:
+    driver: bridge
